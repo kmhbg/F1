@@ -4,20 +4,17 @@ from datetime import datetime
 import sqlite3
 
 e = ergast_py.Ergast()
-# Get all the races for current year
-races = e.season(datetime.now().strftime('%Y')).get_races()
-# Get all drivers for current year
-drivers = e.season(datetime.now().strftime('%Y')).get_drivers()
-# Get total standings
-driver_standings = e.season(datetime.now().strftime('%Y')).get_driver_standings()
 
-constructor_standings = e.season(datetime.now().strftime('%Y')).get_constructor_standings()
+
+
+
+#constructor_standings = e.season(datetime.now().strftime('%Y')).get_constructor_standings()
 
 current_date = datetime.now().strftime('%Y-%m-%d')
 
 db_file = "./database.db"
 betters = ["Seb","Oskar","Jonte","Marcus","Filip"]
-
+# Races
 def create_races_table():
     """Creates a table holding all races for current year"""
     con = sqlite3.connect(db_file)
@@ -27,80 +24,31 @@ def create_races_table():
           (season INT, round INT, race_name TEXT,sprint TEXT, race_date DATE)
           ''')
     con.commit()
-def create_result_table():
-    """Creates a table holding all results for current year"""
+
+def create_next_race_table():
+    """Creates a table holding all races for current year"""
     con = sqlite3.connect(db_file)
     cur = con.cursor()
     cur.execute('''
-          CREATE TABLE IF NOT EXISTS result
-          (round INT, first TEXT,second TEXT, third TEXT)
+          CREATE TABLE IF NOT EXISTS next_race
+          (last_race INT, next_race INT,updated INT)
           ''')
     con.commit()
-def create_driver_table():
-    """Creates a table holding all drivers and standings for current year"""
-    con = sqlite3.connect(db_file)
-    cur = con.cursor()
-    cur.execute('''
-          CREATE TABLE IF NOT EXISTS drivers
-          (code TEXT, name TEXT, points INT, wins INT, standing INT)
-          ''')
-    con.commit()
-def create_bet_table():
-    """Creates a table holding all bets for current year"""
-    con = sqlite3.connect(db_file)
-    cur = con.cursor()
-    cur.execute('''
-          CREATE TABLE IF NOT EXISTS bets
-          (name INT, round INT, first TEXT,second TEXT, third text, points INT)
-          ''')
-    con.commit()
+
 def insert_races_to_db(season,round,race_name,sprint,race_date):   
     con = sqlite3.connect(db_file)
     cur = con.cursor()
     cur.execute(
         f"INSERT INTO races (season, round, race_name, sprint, race_date) VALUES ('{season}','{round}','{race_name}','{sprint}','{race_date}')")
     con.commit()
-def insert_drivers_to_db(code,name,points=0,wins=0,standing=0):
-    con = sqlite3.connect(db_file)
-    cur = con.cursor()
-    cur.execute(
-        f"INSERT INTO drivers (code,name,points,wins,standing) VALUES ('{code}','{name}','{points}','{wins}','{standing}')")
-    con.commit()
 
-def insert_result_to_db(round,first,second,third):
-    create_result_table()
-    con = sqlite3.connect(db_file)
-    cur = con.cursor()
-    cur.execute(
-        f"INSERT INTO result (round,first,second,third) VALUES ('{round}','{first}','{second}','{third}')")
-    con.commit()
-def insert_bet_to_db(name,round,first="",second="",third="",points=0):
-    """Insert bet in for the race in the bet table"""
-    create_bet_table()
-    con = sqlite3.connect(db_file)
-    cur = con.cursor()
-    cur.execute(
-        f"INSERT INTO bets (name,round,first,second,third,points) VALUES ('{name}','{round}','{first}','{second}','{third}','{points}')")
-    con.commit()
-def update_drivers_in_db(code,points,wins,standing):
+def update_next_race_in_db(last,next):
     """Updates points to the drivers table, should be run after each race"""
     con = sqlite3.connect(db_file)
     cur = con.cursor()
-    cur.execute(f"UPDATE drivers SET points = '{points}', wins = '{wins}', standing = '{standing}' WHERE code = '{code}'")
+    cur.execute(f"UPDATE next_race SET last_race = {last}, next_race = {next}")
     con.commit()
 # race name races[0].race_name
-
-def check_file_in_db(current_year):
-    con = sqlite3.connect(db_file)
-    cur = con.cursor()
-    exists = cur.execute(
-        f"select exists(select season from races where round = '{current_year}')")
-    con.commit()
-    if cur.fetchone():
-        return True
-
-    else:
-        return False
 
 def get_race_results(round):
     """Getting the results from given race"""
@@ -112,6 +60,46 @@ def get_race_results(round):
         insert_result_to_db(round,first,second,third)
     else:
         print("Racet är inte slut eller har inte börjat")  
+
+def insert_next_race(last,next,updated=0):
+    """Insert bet in for the race in the bet table"""
+    create_next_race_table()
+    con = sqlite3.connect(db_file)
+    cur = con.cursor()
+    cur.execute(
+        f"INSERT INTO next_race (last_race,next_race,updated) VALUES ('{last}','{next}','{updated}')")
+    con.commit()
+
+def next_race():
+    con = sqlite3.connect(db_file)
+    cur = con.cursor()
+    cur.execute(f"SELECT next_race from next_race")
+    con.commit()
+    next_race = cur.fetchone()[0]
+    print(next_race)
+    return next_race
+
+def get_next_race():
+    con = sqlite3.connect(db_file)
+    cur = con.cursor()
+    cur.execute(f"SELECT last_race from next_race")
+    con.commit()
+    last_race = cur.fetchone()[0]
+
+    
+    race_status = e.season(datetime.now().strftime('%Y')).round(last_race).get_statuses()
+    if len(race_status) !=0:
+        race_status = e.season(datetime.now().strftime('%Y')).round(last_race+1).get_statuses()
+        print(last_race)
+        if len(race_status) == 0:
+            #print(last_race)
+            update_next_race_in_db(last_race+1,last_race+2)
+        else:
+            pass
+
+    else:
+        "Racet har inte börjat än"
+
 
 def race_status(round):
     """Checks if the date is before or after the racedate"""
@@ -126,6 +114,99 @@ def race_status(round):
         return False
     else:
         return True
+
+def get_races():
+    """Get all reces for the season"""
+    # Get all the races for current year
+    races = e.season(datetime.now().strftime('%Y')).get_races()
+    create_races_table()
+    #datetime.now().strftime('%Y')
+    data = {"Säsong": [], "Race": [], "Bana" :[],"Sprint Race": [], "Datum": [] }
+    for race in races:        
+        sprint = race.sprint
+        if sprint is None:
+            sprint = "Nej"
+        else:
+            sprint = "Ja"
+        round = race.round_no
+        race_name = race.race_name
+        season = race.season
+        race_date = generate_race_date(race.date.year,race.date.month,race.date.day)
+        data["Säsong"].append(season)
+        data["Race"].append(round)
+        data["Bana"].append(race_name)
+        data["Sprint Race"].append(sprint)
+        data["Datum"].append(race_date)
+        insert_races_to_db(season,round,race_name,sprint,race_date) 
+    #df = pd.DataFrame(data)
+    #return df
+
+# Results
+def create_result_table():
+    """Creates a table holding all results for current year"""
+    con = sqlite3.connect(db_file)
+    cur = con.cursor()
+    cur.execute('''
+          CREATE TABLE IF NOT EXISTS result
+          (round INT, first TEXT,second TEXT, third TEXT)
+          ''')
+    con.commit()
+
+def insert_result_to_db(round,first,second,third):
+    create_result_table()
+    con = sqlite3.connect(db_file)
+    cur = con.cursor()
+    cur.execute(
+        f"INSERT INTO result (round,first,second,third) VALUES ('{round}','{first}','{second}','{third}')")
+    con.commit()
+    
+# Drivers
+def create_driver_table():
+    """Creates a table holding all drivers and standings for current year"""
+    con = sqlite3.connect(db_file)
+    cur = con.cursor()
+    cur.execute('''
+          CREATE TABLE IF NOT EXISTS drivers
+          (code TEXT, name TEXT, points INT, wins INT, standing INT)
+          ''')
+    con.commit()
+
+def insert_drivers_to_db(code,name,points=0,wins=0,standing=0):
+    con = sqlite3.connect(db_file)
+    cur = con.cursor()
+    cur.execute(
+        f"INSERT INTO drivers (code,name,points,wins,standing) VALUES ('{code}','{name}','{points}','{wins}','{standing}')")
+    con.commit()
+
+def update_drivers_in_db(code,points,wins,standing):
+    """Updates points to the drivers table, should be run after each race"""
+    con = sqlite3.connect(db_file)
+    cur = con.cursor()
+    cur.execute(f"UPDATE drivers SET points = '{points}', wins = '{wins}', standing = '{standing}' WHERE code = '{code}'")
+    con.commit()
+
+# Bets
+def create_bet_table():
+    """Creates a table holding all bets for current year"""
+    con = sqlite3.connect(db_file)
+    cur = con.cursor()
+    cur.execute('''
+          CREATE TABLE IF NOT EXISTS bets
+          (name INT, round INT, first TEXT,second TEXT, third text, points INT)
+          ''')
+    con.commit()
+
+
+
+
+def insert_bet_to_db(name,round,first="",second="",third="",points=0):
+    """Insert bet in for the race in the bet table"""
+    create_bet_table()
+    con = sqlite3.connect(db_file)
+    cur = con.cursor()
+    cur.execute(
+        f"INSERT INTO bets (name,round,first,second,third,points) VALUES ('{name}','{round}','{first}','{second}','{third}','{points}')")
+    con.commit()
 
 def check_bet(round):
 
@@ -166,7 +247,19 @@ def create_bet(round, better, one, two, three):
         return "Tack för ditt bett"
     else:
         return "Du är sen eller så har racet redan varit"
-  
+
+# Others
+def check_file_in_db(current_year):
+    con = sqlite3.connect(db_file)
+    cur = con.cursor()
+    exists = cur.execute(
+        f"select exists(select season from races where round = '{current_year}')")
+    con.commit()
+    if cur.fetchone():
+        return True
+
+    else:
+        return False
 
             
 def format_date_part(part):
@@ -183,33 +276,13 @@ def generate_race_date(y,m,d):
     date = f"{y}-{format_date_part(m)}-{format_date_part(d)}"
     return date
 
-def get_races():
-    """Get all reces for the season"""
-    create_races_table()
-    #datetime.now().strftime('%Y')
-    data = {"Säsong": [], "Race": [], "Bana" :[],"Sprint Race": [], "Datum": [] }
-    for race in races:        
-        sprint = race.sprint
-        if sprint is None:
-            sprint = "Nej"
-        else:
-            sprint = "Ja"
-        round = race.round_no
-        race_name = race.race_name
-        season = race.season
-        race_date = generate_race_date(race.date.year,race.date.month,race.date.day)
-        data["Säsong"].append(season)
-        data["Race"].append(round)
-        data["Bana"].append(race_name)
-        data["Sprint Race"].append(sprint)
-        data["Datum"].append(race_date)
-        insert_races_to_db(season,round,race_name,sprint,race_date) 
-    #df = pd.DataFrame(data)
-    #return df
+
         
 
 
 def get_drivers():
+    # Get all drivers for current year
+    drivers = e.season(datetime.now().strftime('%Y')).get_drivers()
     create_driver_table()
     for driver in drivers:        
         code = driver.code
@@ -218,24 +291,41 @@ def get_drivers():
 
 
 def update_points():
+    # Get total standings
+    driver_standings = e.season(datetime.now().strftime('%Y')).get_driver_standings()
     for driver in driver_standings[0].driver_standings:
         update_drivers_in_db(driver.driver.code,driver.points,driver.wins,driver.position)
+
 def read_database(table_name):
     con = sqlite3.connect("./database.db")
     df = pd.read_sql_query(f"SELECT * FROM {table_name}", con)
     return df
+
 def get_driver_list():
     con = sqlite3.connect("./database.db")
     df = pd.read_sql_query(f"SELECT code FROM drivers", con)
     return df
+
 def get_race_list():
     con = sqlite3.connect("./database.db")
     df = pd.read_sql_query(f"SELECT round FROM races", con)
     return df
+
+def get_race_name():
+    round = next_race()
+    con = sqlite3.connect(db_file)
+    cur = con.cursor()
+    cur.execute(f"SELECT race_name FROM races WHERE round='{round}'")
+    con.commit()
+    race_name = cur.fetchone()[0]
+    return race_name
+
+
 def sum_bet_points():
     con = sqlite3.connect("./database.db")
     df = pd.read_sql_query(f"select name,sum(points) as points from bets group by name", con)
     return df
+
 def run():
     #get_drivers()
     #print(get_driver_list().values.tolist())
@@ -249,6 +339,10 @@ def run():
     #get_race_results(2)
     #check_bet(1)
     #is_race_over()
+    #get_next_race()
+    #insert_next_race(1,2)
+    print(get_next_race())
+    print(get_race_name())
     print("hej")
 
 if __name__ == "__main__":
