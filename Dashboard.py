@@ -1,5 +1,5 @@
 import streamlit as st
-import streamlit_authenticator as stauthmel
+#import streamlit_authenticator as stauthmel
 import pandas as pd
 from main import read_database, sum_bet_points
 

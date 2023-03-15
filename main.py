@@ -73,11 +73,11 @@ def insert_next_race(last,next,updated=0):
 def next_race():
     con = sqlite3.connect(db_file)
     cur = con.cursor()
-    cur.execute(f"SELECT next_race from next_race")
+    cur.execute(f"SELECT last_race from next_race")
     con.commit()
-    next_race = cur.fetchone()[0]
-    print(next_race)
-    return next_race
+    last_race = cur.fetchone()[0]
+    
+    return last_race
 
 def get_next_race():
     con = sqlite3.connect(db_file)
