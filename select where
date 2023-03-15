@@ -1,0 +1,2 @@
+-- SQLite
+SELECT race_date from races where round=1
