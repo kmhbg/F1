@@ -326,6 +326,34 @@ def sum_bet_points():
     df = pd.read_sql_query(f"select name,sum(points) as points from bets group by name", con)
     return df
 
+def check_bets(name,first,second,third):
+    race_name = get_race_name()
+    unique_bet = 0
+    round = next_race()
+    con = sqlite3.connect("./database.db")
+    df2 = pd.read_sql_query(f"select name from bets where round={round} and name = '{name}'", con)
+    if first == second == third:
+        return "Du har valt samma på alla positioner"
+    elif not df2['name'].empty:
+        
+        return f"Du har redan lagt ditt bet för {race_name}"
+    else:
+        for better in betters:
+            
+            df = pd.read_sql_query(f"select first, second, third from bets where round={round} and name = '{better}'", con)
+            if df.empty:
+                create_bet(round, name, first, second, third)
+                return "Tack för ditt bett!"
+            elif first == df['first'].iloc[0] and second == df['second'].iloc[0] and third == df['third'].iloc[0]:
+                pass
+            else:
+                unique_bet += 1
+    if unique_bet != 3:
+        return "Sorry ditt bet finns resan"
+    else:
+        create_bet(round, name, first, second, third)
+        return "Tack för ditt bett!"
+
 def run():
     #get_drivers()
     #print(get_driver_list().values.tolist())
@@ -341,6 +369,7 @@ def run():
     #is_race_over()
     #get_next_race()
     #insert_next_race(1,2)
+    print(check_bets("Seb","VER","PER","ALO"))
     print(get_next_race())
     print(get_race_name())
     print("hej")

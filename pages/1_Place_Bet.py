@@ -1,5 +1,5 @@
 import streamlit as st
-from main import read_database,get_driver_list, get_race_list, create_bet,next_race, get_race_name, create_next_race_table,get_next_race, insert_next_race
+from main import read_database,get_driver_list, get_race_list, create_bet,next_race, get_race_name, create_next_race_table,get_next_race, insert_next_race, check_bets
 from PIL import Image
 driver_list = get_driver_list()
 race_list = get_race_list()
@@ -44,8 +44,8 @@ image = Image.open('./assets/qr.png')
 
 
 if st.button('Placera bet'):
-    bet = st.write(create_bet(next_race, better, first, second, third))
-
+    bet = st.write(check_bets(better, first, second, third))
+    st.write(bet)
     st.caption("Använd qr koden för att swisha in ditt bett!")
     st.image(image)
 
