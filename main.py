@@ -7,7 +7,7 @@ e = ergast_py.Ergast()
 
 
 
-#constructor_standings = e.season(datetime.now().strftime('%Y')).get_constructor_standings()
+
 
 current_date = datetime.now().strftime('%Y-%m-%d')
 
@@ -60,6 +60,9 @@ def get_race_results(round):
         get_next_race()
     else:
         print("Racet är inte slut eller har inte börjat")  
+def get_constructor_standings():
+    constructor_standings = e.season(datetime.now().strftime('%Y')).get_constructor_standings()
+    return constructor_standings
 
 def insert_next_race(last,next,updated=0):
     """Insert bet in for the race in the bet table"""
@@ -300,6 +303,10 @@ def read_database(table_name):
     con = sqlite3.connect("./database.db")
     df = pd.read_sql_query(f"SELECT * FROM {table_name}", con)
     return df
+def bets_with_race_name():
+    con = sqlite3.connect("./database.db")
+    df = pd.read_sql_query(f"SELECT bets.name AS 'Namn',races.race_name AS 'Bana',bets.first AS '1:a',bets.second AS '2:a',bets.third AS '3:a',bets.points FROM bets LEFT JOIN races on bets.round=races.round", con)
+    return df
 
 def get_driver_list():
     con = sqlite3.connect("./database.db")
@@ -375,7 +382,8 @@ def run():
     #is_race_over()
     #get_next_race()
     #insert_next_race(1,2)
-    print(check_bets("Seb","VER","PER","ALO"))
+    #print(check_bets("Seb","VER","PER","ALO"))
+    print(get_constructor_standings())
     print(get_next_race())
     print(get_race_name())
     print("hej")
