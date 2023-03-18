@@ -7,7 +7,6 @@ e = ergast_py.Ergast()
 
 
 
-
 #constructor_standings = e.season(datetime.now().strftime('%Y')).get_constructor_standings()
 
 current_date = datetime.now().strftime('%Y-%m-%d')
@@ -58,6 +57,7 @@ def get_race_results(round):
         second = race_results.results[1].driver.code
         third = race_results.results[2].driver.code
         insert_result_to_db(round,first,second,third)
+        get_next_race()
     else:
         print("Racet är inte slut eller har inte börjat")  
 
@@ -310,6 +310,12 @@ def get_race_list():
     con = sqlite3.connect("./database.db")
     df = pd.read_sql_query(f"SELECT round FROM races", con)
     return df
+def remove_bet_from_db(round,name):
+    con = sqlite3.connect(db_file)
+    cur = con.cursor()
+    cur.execute(f"delete from bets where round={round} and name='{name}'")
+    con.commit()
+    return f"Better för {name} och race {round} är borttaget"
 
 def get_race_name():
     round = next_race()
